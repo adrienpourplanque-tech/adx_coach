@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADX COACH</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080f;--surface:#0c0f1d;--card:#111527;--border:#1e2440;--border2:#2a3158;
+  --blue1:#1a2560;--blue2:#2d3f8f;--blue3:#3d56c4;--blue4:#5b7af0;--blue5:#8aa4ff;
+  --accent:#4f6ef7;--glow:rgba(79,110,247,0.15);--text:#e8ecff;
+  --muted:#6b7ab8;--muted2:#4a5490;--green:#22c55e;--red:#ef4444;--radius:14px;
+  --font:'Space Grotesk',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.screen{display:none}
+.screen.active{display:flex}
+#screen-auth,#screen-onboarding,#screen-verify{align-items:center;justify-content:center;min-height:100vh;padding:20px}
+
+.box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px 24px;width:100%;max-width:400px}
+.brand{text-align:center;margin-bottom:28px}
+.brand-name{font-size:32px;font-weight:900;letter-spacing:-1px}
+.brand-sub{font-size:9px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:3px}
+
+.tabs{display:flex;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:20px;gap:4px}
+.tab{flex:1;padding:9px 0;text-align:center;font-size:13px;font-weight:700;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s}
+.tab.active{background:var(--blue2);color:#fff}
+.form{display:none}.form.active{display:block}
+
+label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;font-weight:600;margin-top:14px}
+input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:13px 14px;color:var(--text);font-size:15px;font-family:var(--font);outline:none}
+input:focus{border-color:var(--blue3)}
+
+.btn{width:100%;background:linear-gradient(135deg,var(--blue3),var(--accent));color:#fff;border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);margin-top:22px}
+.btn:disabled{opacity:.5;cursor:default}
+.err{color:var(--red);font-size:13px;margin-top:12px;display:none}
+.msg{color:var(--green);font-size:13px;margin-top:12px;display:none}
+
+.chipset{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);font-size:13px;cursor:pointer;color:var(--muted)}
+.chip.sel{border-color:var(--blue4);color:#fff;background:var(--blue1)}
+
+.center-icon{font-size:40px;text-align:center;margin-bottom:14px}
+p.sub{color:var(--muted);font-size:13px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH ══ -->
+<div id="screen-auth" class="screen active">
+  <div class="box">
+    <div class="brand"><div class="brand-name">ADX <span style="color:var(--blue4)">COACH</span></div><div class="brand-sub">Planifie. Entraîne-toi. Progresse.</div></div>
+
+    <div class="tabs">
+      <div class="tab active" data-t="login" onclick="switchTab('login')">Connexion</div>
+      <div class="tab" data-t="signup" onclick="switchTab('signup')">Inscription</div>
+    </div>
+
+    <div class="form active" id="form-login">
+      <label>Email</label><input type="email" id="loginEmail" placeholder="toi@exemple.com">
+      <label>Mot de passe</label><input type="password" id="loginPwd" placeholder="••••••••">
+      <button class="btn" onclick="doLogin()">Se connecter</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+
+    <div class="form" id="form-signup">
+      <label>Email</label><input type="email" id="suEmail" placeholder="toi@exemple.com">
+      <label>Mot de passe</label><input type="password" id="suPwd" placeholder="8 caractères minimum">
+      <button class="btn" onclick="doSignup()">Créer mon compte</button>
+      <div class="err" id="suErr"></div>
+      <div class="msg" id="suMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VÉRIFICATION EMAIL ══ -->
+<div id="screen-verify" class="screen">
+  <div class="box">
+    <div class="center-icon">📩</div>
+    <p class="sub">Un email de confirmation vient d'être envoyé.<br>Clique sur le lien qu'il contient, puis reviens ici et connecte-toi.</p>
+    <button class="btn" onclick="showScreen('auth'); switchTab('login')">Retour à la connexion</button>
+  </div>
+</div>
+
+<!-- ══ ONBOARDING ══ -->
+<div id="screen-onboarding" class="screen">
+  <div class="box" style="max-width:460px;">
+    <div class="brand"><div class="brand-name">Bienvenue</div></div>
+    <label>Prénom</label>
+    <input type="text" id="obPrenom" placeholder="Ton prénom">
+
+    <label>Sport(s) pratiqué(s)</label>
+    <div class="chipset" id="obSports">
+      <div class="chip" data-v="course">Course à pied</div>
+      <div class="chip" data-v="trail">Trail</div>
+      <div class="chip" data-v="velo">Vélo</div>
+      <div class="chip" data-v="natation">Natation</div>
+      <div class="chip" data-v="triathlon">Triathlon</div>
+    </div>
+
+    <label>Objectif principal — nom de la course</label>
+    <input type="text" id="obRaceSearch" placeholder="ex : Marathon de Paris..." autocomplete="off">
+    <div id="obRaceResults" style="margin-top:8px;"></div>
+    <div id="obRaceManual" style="display:none; margin-top:10px; padding:12px; background:var(--surface); border-radius:10px;">
+      <p class="sub" style="text-align:left; margin-bottom:8px;">Course non trouvée — renseigne-la toi-même :</p>
+      <label>Type</label>
+      <div class="chipset" id="obManualType">
+        <div class="chip" data-v="route">Route</div>
+        <div class="chip" data-v="trail">Trail</div>
+        <div class="chip" data-v="triathlon">Triathlon</div>
+      </div>
+      <label>Distance (km)</label><input type="number" step="0.1" id="obManualDist">
+      <label>Date</label><input type="date" id="obManualDate">
+    </div>
+
+    <button class="btn" onclick="finishOnboarding()">C'est parti</button>
+    <div class="err" id="obErr"></div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://wlvtwezgqrydxcilcsjb.supabase.co';
+const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsdnR3ZXpncXJ5ZHhjaWxjc2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Mzc3NTIsImV4cCI6MjEwNjMxMzc1Mn0.9ogPDLr0BKg3_UGDBI3eZeot28bbxCqUcYmDJgQU-0k';
+
+const sb = supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.t===name));
+  document.querySelectorAll('.form').forEach(f=>f.classList.remove('active'));
+  document.getElementById('form-'+name).classList.add('active');
+}
+
+async function doSignup(){
+  const email = document.getElementById('suEmail').value;
+  const password = document.getElementById('suPwd').value;
+  const errEl = document.getElementById('suErr'), msgEl = document.getElementById('suMsg');
+  errEl.style.display='none'; msgEl.style.display='none';
+  if(!email || password.length < 8){ errEl.textContent='Email valide + mot de passe (8 caractères min).'; errEl.style.display='block'; return; }
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error){ errEl.textContent = error.message; errEl.style.display='block'; return; }
+  // Crée la ligne de profil correspondante (RLS: chacun crée la sienne)
+  if(data.user){
+    await sb.from('profiles').insert({ id: data.user.id, email });
+  }
+  showScreen('verify');
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPwd').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display='none';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ errEl.textContent = error.message; errEl.style.display='block'; return; }
+  await routeAfterLogin();
+}
+
+async function routeAfterLogin(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if(!profile || !profile.prenom){
+    showScreen('onboarding');
+  }else{
+    // TODO : rediriger vers l'app principale (dashboard ADX Coach)
+    document.body.innerHTML = '<p style="padding:40px;color:#fff;font-family:sans-serif;">Connecté ✅ — l\'app principale se branche ici dans la prochaine étape.</p>';
+  }
+}
+
+// ---- Onboarding : sports (multi-select) ----
+document.getElementById('obSports').addEventListener('click', e=>{
+  const c = e.target.closest('.chip'); if(!c) return;
+  c.classList.toggle('sel');
+});
+
+// ---- Onboarding : recherche de course (dans la table races) ----
+let obSelectedRace = null;
+let obManualMode = false;
+document.getElementById('obRaceSearch').addEventListener('input', async e=>{
+  const q = e.target.value.trim();
+  const resEl = document.getElementById('obRaceResults');
+  document.getElementById('obRaceManual').style.display='none';
+  obManualMode = false;
+  if(q.length < 2){ resEl.innerHTML=''; return; }
+  const { data, error } = await sb.from('races').select('*').ilike('name', '%'+q+'%').limit(6);
+  if(error || !data || data.length===0){
+    resEl.innerHTML = `<p class="sub" style="text-align:left; cursor:pointer; color:var(--blue4);" onclick="useManualRace()">Course non trouvée — la renseigner moi-même →</p>`;
+    return;
+  }
+  resEl.innerHTML = data.map(r => `
+    <div class="chip" style="display:block; width:100%; margin-bottom:6px; text-align:left;" onclick='selectRace(${JSON.stringify(r).replace(/'/g,"&#39;")})'>${r.name}${r.distance_km?' · '+r.distance_km+' km':''}</div>
+  `).join('') + `<p class="sub" style="text-align:left; cursor:pointer; color:var(--blue4); margin-top:6px;" onclick="useManualRace()">Pas la bonne course — la renseigner moi-même →</p>`;
+});
+function selectRace(r){
+  obSelectedRace = r;
+  obManualMode = false;
+  document.getElementById('obRaceManual').style.display='none';
+  document.getElementById('obRaceSearch').value = r.name;
+  document.getElementById('obRaceResults').innerHTML = `<p class="sub" style="text-align:left; color:var(--green);">✓ ${r.name} sélectionnée</p>`;
+}
+window.selectRace = selectRace;
+function useManualRace(){
+  obManualMode = true;
+  obSelectedRace = null;
+  document.getElementById('obRaceManual').style.display='block';
+  document.getElementById('obRaceResults').innerHTML='';
+}
+window.useManualRace = useManualRace;
+document.getElementById('obManualType').addEventListener('click', e=>{
+  const c = e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#obManualType .chip').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel');
+});
+
+async function finishOnboarding(){
+  const errEl = document.getElementById('obErr');
+  errEl.style.display='none';
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  const prenom = document.getElementById('obPrenom').value;
+  const sports = Array.from(document.querySelectorAll('#obSports .chip.sel')).map(c=>c.dataset.v);
+  if(!prenom || sports.length===0){ errEl.textContent='Prénom et au moins un sport sont nécessaires.'; errEl.style.display='block'; return; }
+
+  await sb.from('profiles').update({ prenom, sports }).eq('id', user.id);
+
+  const goal = { user_id: user.id };
+  if(obSelectedRace){
+    goal.race_id = obSelectedRace.id;
+  }else if(obManualMode){
+    const type = document.querySelector('#obManualType .chip.sel')?.dataset.v;
+    goal.custom_name = document.getElementById('obRaceSearch').value;
+    goal.custom_date = document.getElementById('obManualDate').value || null;
+    goal.mode = type==='triathlon' ? 'triathlon' : 'single';
+    goal.disc = type;
+    goal.dist_km = document.getElementById('obManualDist').value || null;
+  }
+  await sb.from('goals').insert(goal);
+
+  document.body.innerHTML = '<p style="padding:40px;color:#fff;font-family:sans-serif;">Profil configuré ✅ — l\'app principale se branche ici dans la prochaine étape.</p>';
+}
+window.finishOnboarding = finishOnboarding;
+
+// Reprise de session si déjà connecté
+(async ()=>{
+  const { data: { user } } = await sb.auth.getUser();
+  if(user) await routeAfterLogin();
+})();
+</script>
+</body>
+</html>
